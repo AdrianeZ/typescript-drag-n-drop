@@ -9,26 +9,30 @@ interface Validatable {
 }
 
 type ProjectType = "active" | "finished";
-type projectListener = (projects: Project[]) => void;
+type projectListener<T>= (projects: T[]) => void;
 
-class State {
-    private static instance: State;
-    private listeners: projectListener[] = [];
+abstract class State<T>
+{
+    protected listeners: projectListener<T>[] = [];
+
+    addListener(listener: projectListener<T>): void {
+        this.listeners.push(listener);
+    }
+}
+
+class ProjectState extends State<Project>{
+    private static instance: ProjectState;
     private projects: Project[] = [];
 
 
     private constructor() {
+        super();
     }
 
     addProject(project: Project): void {
         this.projects.push(project);
         this.updateState();
     }
-
-    addListener(listener: projectListener): void {
-        this.listeners.push(listener);
-    }
-
     updateState(): void {
         for (const ln of this.listeners) {
             ln(this.projects);
@@ -40,13 +44,13 @@ class State {
             return this.instance;
         }
 
-        this.instance = new State();
+        this.instance = new ProjectState();
         return this.instance;
     }
 
 }
 
-const state = State.createState();
+const state = ProjectState.createState();
 
 class Project {
 
