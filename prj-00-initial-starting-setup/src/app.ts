@@ -1,3 +1,17 @@
+interface Draggable {
+    dragStart(event: DragEvent): void
+
+    dragEnd(event: DragEvent): void
+}
+
+interface DragTarget {
+    dragOver(event: DragEvent): void
+
+    dragLeave(event: DragEvent): void
+
+    drop(event: DragEvent): void
+}
+
 interface Validatable {
     value: string | number;
     required?: boolean;
@@ -9,10 +23,9 @@ interface Validatable {
 }
 
 type ProjectType = "active" | "finished";
-type projectListener<T>= (projects: T[]) => void;
+type projectListener<T> = (projects: T[]) => void;
 
-abstract class State<T>
-{
+abstract class State<T> {
     protected listeners: projectListener<T>[] = [];
 
     addListener(listener: projectListener<T>): void {
@@ -20,7 +33,7 @@ abstract class State<T>
     }
 }
 
-class ProjectState extends State<Project>{
+class ProjectState extends State<Project> {
     private static instance: ProjectState;
     private projects: Project[] = [];
 
@@ -33,6 +46,7 @@ class ProjectState extends State<Project>{
         this.projects.push(project);
         this.updateState();
     }
+
     updateState(): void {
         for (const ln of this.listeners) {
             ln(this.projects);
@@ -54,7 +68,7 @@ const state = ProjectState.createState();
 
 class Project {
 
-    constructor(private title: string, private description: string, private people: number, public type: ProjectType) {
+    constructor(private title: string, private description: string, private people: number, public type: ProjectType, public id: string = Math.random().toString()) {
     }
 
     getTitle(): string {
@@ -116,7 +130,7 @@ function validate(obj: Validatable): boolean {
 
 abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     private templeteElement: HTMLTemplateElement;
-    private distElement: T;
+    protected distElement: T;
     protected nodeToRender: U;
 
 
@@ -134,28 +148,77 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     }
 
     abstract configure(): void;
+
 }
 
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable {
+    private project: Project;
 
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
-    constructor(private type: ProjectType) {
-        super("project-list", "app", false,`${type}-project-lists`);
+    constructor(distId: string, project: Project) {
+        super("single-project", distId, false, project.id);
+        this.project = project;
         this.configure();
     }
 
+
+    get person(): string {
+        return this.project.getPeople() <= 1 ? `${this.project.getPeople()} person assigned` : `${this.project.getPeople()} persons assigned`
+    }
+
+    configure() {
+        this.nodeToRender.addEventListener("dragstart", this.dragStart.bind(this));
+        this.nodeToRender.addEventListener("dragend", this.dragEnd.bind(this));
+        this.nodeToRender.querySelector("h2")!.textContent = this.project.getTitle();
+        this.nodeToRender.querySelector("h3")!.textContent = this.person;
+        this.nodeToRender.querySelector("p")!.textContent = this.project.getDescription();
+    }
+
+    dragEnd(event: DragEvent): void {
+        console.log("Drag end")
+    }
+
+    dragStart(event: DragEvent): void {
+        console.log(event);
+    }
+
+}
+
+
+class ProjectList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
+    constructor(private type: ProjectType) {
+        super("project-list", "app", false, `${type}-projects`);
+        this.configure();
+    }
+
+    dragOver(event: DragEvent): void {
+        const draggedList = this.nodeToRender.querySelector("ul")!;
+        draggedList.classList.add("droppable");
+        console.log("dragover")
+    }
+
+    dragLeave(event: DragEvent): void {
+            const leavedList = this.nodeToRender.querySelector("ul")!;
+            leavedList.classList.remove("droppable");
+        console.log("dragleave");
+    }
+
+    drop(event: DragEvent): void {
+        throw new Error("Method not implemented");
+    }
+
     configure(): void {
-        this.nodeToRender.querySelector("ul")!.id = `${this.type}-project-lists`;
+        this.nodeToRender.addEventListener("dragover", this.dragOver.bind(this));
+        this.nodeToRender.addEventListener("drop", this.drop.bind(this));
+        this.nodeToRender.addEventListener("dragleave", this.dragLeave.bind(this));
+        this.nodeToRender.querySelector("ul")!.id = `${this.type}-project-listing`;
         this.nodeToRender.querySelector("h2")!.textContent = this.type.toUpperCase() + " PROJECTS";
 
         const stateListener = (projects: Project[]) => {
             const filteredProjects = projects.filter(project => project.type === this.type);
-            const ul = this.nodeToRender.querySelector(`#${this.type}-project-lists`)! as HTMLUListElement;
+            const ul = this.nodeToRender.querySelector(`#${this.type}-project-listing`)! as HTMLUListElement;
             ul.textContent = "";
-
             for (let i = 0; i < filteredProjects.length; i++) {
-                const newLi = document.createElement("li");
-                newLi.textContent = filteredProjects[i].getTitle();
-                ul.appendChild(newLi);
+                new ProjectItem(ul.id, filteredProjects[i]);
             }
         }
         state.addListener(stateListener);

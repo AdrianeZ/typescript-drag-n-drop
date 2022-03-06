@@ -8,6 +8,7 @@ html {
 
 body {
   margin: 0;
+  padding: 1rem;
 }
 
 label,
@@ -20,6 +21,28 @@ textarea {
 label {
   font-weight: bold;
 }
+
+#project-form
+{
+  margin: 0 auto;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.form-control
+{
+  min-width: 300px;
+}
+
+.form-control input[type=number]
+{
+  display: inline-block;
+  width: 50px;
+}
+
 
 input,
 textarea {
@@ -34,6 +57,7 @@ input:focus,
 textarea:focus {
   outline: none;
   background: #fff5f9;
+  border: 1px solid #bad3f6;
 }
 
 button {
@@ -91,6 +115,7 @@ button:active {
   box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.26);
   padding: 1rem;
   margin: 1rem;
+  background: white;
 }
 
 .projects li h2 {
